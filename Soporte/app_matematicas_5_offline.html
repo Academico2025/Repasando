@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Matemáticas 5° — App Offline</title>
+  <meta name="description" content="App didáctica y pedagógica para repasar Matemáticas de 5° primaria. Funciona 100% offline. Incluye evaluación formativa, andamiaje y reporte imprimible."/>
+  <!-- Manifest y Service Worker (se crean en tiempo de ejecución para permitir uso 100% offline incluso tras recargar) -->
+  <link rel="manifest" id="dyn-manifest"/>
+  <style>
+    :root{
+      --bg:#0f172a;/* slate-900 */
+      --panel:#111827;/* gray-900 */
+      --muted:#94a3b8;/* slate-400 */
+      --text:#e5e7eb;/* gray-200 */
+      --accent:#22c55e;/* green-500 */
+      --accent-2:#60a5fa;/* blue-400 */
+      --warn:#f59e0b;/* amber-500 */
+      --err:#ef4444;/* red-500 */
+      --ok:#10b981;/* emerald-500 */
+      --card:#0b1220;/* deep panel */
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--text); background: radial-gradient(1200px 700px at 10% -10%, #172554, transparent),
+                               radial-gradient(900px 600px at 110% 10%, #14532d, transparent),
+                               var(--bg);
+    }
+    header{
+      position:sticky; top:0; z-index:50; backdrop-filter: blur(8px); background: rgba(15,23,42,.6);
+      border-bottom:1px solid rgba(255,255,255,.05);
+    }
+    .wrap{max-width:1100px; margin:0 auto; padding: 18px;}
+    .brand{display:flex; align-items:center; gap:12px;}
+    .logo{width:42px;height:42px;border-radius:12px; background: linear-gradient(135deg,var(--accent),var(--accent-2)); box-shadow:var(--shadow); display:grid; place-items:center; font-weight:800; color:#0b1220}
+    h1{font-size: clamp(20px, 2.5vw, 28px); margin:0}
+    nav{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
+    nav button{
+      background: #111827; color:var(--text); border:1px solid rgba(255,255,255,.08);
+      padding:10px 14px; border-radius:12px; cursor:pointer; transition:.2s transform,.2s background;
+    }
+    nav button.active, nav button:hover{ background:#1f2937; transform: translateY(-1px)}
+
+    main{max-width:1100px; margin: 18px auto; padding:0 18px 60px}
+
+    .grid{display:grid; gap:18px}
+    @media(min-width:880px){ .grid{ grid-template-columns: 1.3fr .7fr; }}
+
+    .card{ background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.08); border-radius: var(--radius); box-shadow: var(--shadow); padding:18px}
+    .card h2{ margin-top:0; font-size: clamp(18px,2.2vw,24px)}
+    .muted{ color: var(--muted)}
+    .badge{ display:inline-block; padding:2px 8px; border-radius:999px; background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); font-size:12px}
+
+    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+    .row > *{ flex: none }
+
+    input[type="number"], input[type="text"], select{
+      background:#0b1220; color:var(--text); border:1px solid rgba(255,255,255,.1); padding:10px 12px; border-radius:12px; outline:none; width: 100%; box-sizing:border-box
+    }
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; }
+    .btn{ background: var(--accent); color:#06260f; border:none; padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:700 }
+    .btn.sec{ background:#1f2937; color:var(--text); border:1px solid rgba(255,255,255,.12)}
+    .btn.warn{ background:var(--warn); color:#241a00 }
+    .btn.ghost{ background: transparent; border:1px dashed rgba(255,255,255,.3); color:var(--text)}
+
+    .pill{ display:inline-flex; align-items:center; gap:10px; background:#0b1220; border:1px solid rgba(255,255,255,.1); padding:10px 12px; border-radius:999px}
+
+    .question{ font-size: clamp(18px, 2.4vw, 24px); font-weight: 700; margin: 6px 0 12px }
+    .hint{ background:#0b1220; border-left:4px solid var(--accent-2); padding:10px 12px; border-radius: 10px}
+
+    .result{ padding: 12px; border-radius:12px; border:1px solid rgba(255,255,255,.12)}
+    .result.ok{ background: rgba(16,185,129,.12); border-color: rgba(16,185,129,.5)}
+    .result.err{ background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.5)}
+
+    .foot{ color:#9ca3af; font-size:12px; text-align:center; margin-top:28px }
+
+    details{ background:#0b1220; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:10px 12px}
+    summary{ cursor:pointer; font-weight:700}
+
+    .kpi{ display:grid; grid-template-columns: repeat(4,1fr); gap:10px }
+    .kpi .cell{ background:#0b1220; border:1px solid rgba(255,255,255,.1); padding:12px; border-radius:12px; text-align:center }
+    .kpi .cell b{ font-size:22px; display:block }
+    .stars{ color: gold; text-shadow:0 0 8px rgba(255,215,0,.4)}
+
+    .table{ width:100%; border-collapse: collapse; font-size:14px }
+    .table th,.table td{ border:1px solid rgba(255,255,255,.12); padding:8px 10px }
+    .table th{ background:#111827 }
+
+    .toast{ position:fixed; right:16px; bottom:16px; background:#111827; border:1px solid rgba(255,255,255,.15); padding:10px 12px; border-radius:12px; box-shadow: var(--shadow); display:none }
+    .sr-only{ position:absolute; left:-9999px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">π</div>
+        <div>
+          <h1>Matemáticas 5° — App Offline</h1>
+          <div class="muted">Práctica guiada y evaluación formativa.</div>
+        </div>
+      </div>
+      <nav aria-label="Módulos">
+        <button data-view="inicio" class="active">Inicio</button>
+        <button data-view="operaciones">Números y operaciones</button>
+        <button data-view="fracciones">Fracciones & decimales</button>
+        <button data-view="geometria">Geometría</button>
+        <button data-view="medicion">Medición & datos</button>
+        <button data-view="problemas">Problemas</button>
+        <button data-view="reporte">Reporte / Evidencia</button>
+        <button data-view="memoria">Memoria pedagógica</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section id="inicio" class="grid view card">
+      <div class="card">
+        <h2>¿Cómo funciona?</h2>
+        <p>
+          Esta app genera ejercicios <b>aleatorios</b> alineados a 5° de primaria. Cada actividad ofrece <b>pistas</b>,
+          <b>pasos guiados</b> y <b>retroalimentación inmediata</b>. El sistema adapta la dificultad según tu desempeño
+          y guarda el progreso en tu dispositivo (<i>localStorage</i>) para funcionar <b>100% offline</b>.
+        </p>
+        <div class="row" role="group" aria-label="Controles rápidos">
+          <button class="btn" id="btn-demo">Empezar práctica rápida</button>
+          <button class="btn sec" id="btn-clear">Reiniciar progreso</button>
+          <span class="pill" title="Modo docente / evaluación"><input type="checkbox" id="modo-docente"/> <label for="modo-docente">Modo docente</label></span>
+        </div>
+        <h3>Progreso general</h3>
+        <div class="kpi" id="kpi"></div>
+      </div>
+      <aside class="card">
+        <h2>Objetivos de aprendizaje</h2>
+        <ul>
+          <li>Operaciones con enteros y decimales hasta 3 cifras (con y sin llevar).</li>
+          <li>Fracciones equivalentes, simplificación y suma/resta de fracciones con igual denominador.</li>
+          <li>Relación fracción–decimal–porcentaje (casos sencillos).</li>
+          <li>Perímetro y área de rectángulos y triángulos; volumen de prismas rectangulares.</li>
+          <li>Conversión métrica básica (longitud, masa, capacidad) y lectura de gráficos simples.</li>
+          <li>Resolución de problemas en contextos cotidianos con estrategias paso a paso.</li>
+        </ul>
+        <details>
+          <summary>Accesibilidad</summary>
+          <p>Compatible con teclado (Tab/Enter), contrastes elevados, textos descriptivos y 
+          navegación simple. No requiere conexión. Sin publicidad. Sin datos personales.</p>
+        </details>
+      </aside>
+    </section>
+
+    <!-- VISTA: Operaciones -->
+    <section id="operaciones" class="view card" hidden>
+      <h2>Números y operaciones</h2>
+      <div class="row">
+        <label>Tipo: 
+          <select id="op-tipo">
+            <option value="suma">Suma</option>
+            <option value="resta">Resta</option>
+            <option value="mult">Multiplicación</option>
+            <option value="div">División (exacta)</option>
+          </select>
+        </label>
+        <label>Dificultad:
+          <select id="op-dif">
+            <option value="1">Nivel 1 (dos cifras)</option>
+            <option value="2">Nivel 2 (tres cifras)</option>
+            <option value="3">Nivel 3 (decimales)</option>
+          </select>
+        </label>
+        <button class="btn" id="op-nuevo">Nuevo ejercicio</button>
+      </div>
+      <div class="question" id="op-pregunta">Pulsa «Nuevo ejercicio»</div>
+      <div class="row">
+        <input id="op-resp" type="text" inputmode="decimal" placeholder="Escribe tu respuesta" aria-label="Respuesta"/>
+        <button class="btn" id="op-verificar">Verificar</button>
+        <button class="btn sec" id="op-pista">Pista</button>
+      </div>
+      <div id="op-feedback" class="result" hidden></div>
+      <details id="op-pasos" hidden>
+        <summary>Pasos sugeridos</summary>
+        <ol id="op-lista-pasos"></ol>
+      </details>
+    </section>
+
+    <!-- VISTA: Fracciones -->
+    <section id="fracciones" class="view card" hidden>
+      <h2>Fracciones & decimales</h2>
+      <div class="row">
+        <label>Actividad:
+          <select id="fr-actividad">
+            <option value="equiv">Fracciones equivalentes</option>
+            <option value="simpl">Simplificar fracción</option>
+            <option value="suma">Sumar fracciones (igual denom.)</option>
+            <option value="conv">Convertir a decimal (denom. 2,4,5,10,20,25,50,100)</option>
+          </select>
+        </label>
+        <button class="btn" id="fr-nuevo">Nuevo ejercicio</button>
+      </div>
+      <div class="question" id="fr-pregunta">Pulsa «Nuevo ejercicio»</div>
+      <div class="row">
+        <input id="fr-resp" type="text" inputmode="decimal" placeholder="Respuesta"/>
+        <button class="btn" id="fr-verificar">Verificar</button>
+        <button class="btn sec" id="fr-pista">Pista</button>
+      </div>
+      <div id="fr-feedback" class="result" hidden></div>
+      <details id="fr-pasos" hidden>
+        <summary>Pasos sugeridos</summary>
+        <ol id="fr-lista-pasos"></ol>
+      </details>
+    </section>
+
+    <!-- VISTA: Geometría -->
+    <section id="geometria" class="view card" hidden>
+      <h2>Geometría</h2>
+      <div class="row">
+        <label>Figura:
+          <select id="geo-actividad">
+            <option value="per-rect">Perímetro rectángulo</option>
+            <option value="area-rect">Área rectángulo</option>
+            <option value="area-tri">Área triángulo</option>
+            <option value="vol-prisma">Volumen prisma rectangular</option>
+          </select>
+        </label>
+        <button class="btn" id="geo-nuevo">Nuevo ejercicio</button>
+      </div>
+      <div class="question" id="geo-pregunta">Pulsa «Nuevo ejercicio»</div>
+      <div class="row">
+        <input id="geo-resp" type="number" step="any" placeholder="Respuesta numérica"/>
+        <button class="btn" id="geo-verificar">Verificar</button>
+        <button class="btn sec" id="geo-pista">Pista</button>
+      </div>
+      <div id="geo-feedback" class="result" hidden></div>
+      <details id="geo-pasos" hidden>
+        <summary>Pasos sugeridos</summary>
+        <ol id="geo-lista-pasos"></ol>
+      </details>
+    </section>
+
+    <!-- VISTA: Medición & datos -->
+    <section id="medicion" class="view card" hidden>
+      <h2>Medición & datos</h2>
+      <div class="row">
+        <label>Actividad:
+          <select id="me-actividad">
+            <option value="conv-long">Conversión de longitud</option>
+            <option value="conv-masa">Conversión de masa</option>
+            <option value="conv-cap">Conversión de capacidad</option>
+            <option value="grafico">Leer gráfico de barras</option>
+          </select>
+        </label>
+        <button class="btn" id="me-nuevo">Nuevo ejercicio</button>
+      </div>
+      <div class="question" id="me-pregunta">Pulsa «Nuevo ejercicio»</div>
+      <div class="row">
+        <input id="me-resp" type="text" inputmode="decimal" placeholder="Respuesta"/>
+        <button class="btn" id="me-verificar">Verificar</button>
+        <button class="btn sec" id="me-pista">Pista</button>
+      </div>
+      <div id="me-feedback" class="result" hidden></div>
+      <details id="me-pasos" hidden>
+        <summary>Pasos sugeridos</summary>
+        <ol id="me-lista-pasos"></ol>
+      </details>
+      <canvas id="me-chart" width="720" height="320" aria-label="Gráfico de barras" role="img" class="card" style="margin-top:10px"></canvas>
+    </section>
+
+    <!-- VISTA: Problemas -->
+    <section id="problemas" class="view card" hidden>
+      <h2>Problemas en contexto</h2>
+      <p class="muted">Sigue una estrategia: <b>Entender → Planear → Resolver → Revisar</b>.</p>
+      <div class="row">
+        <label>Contexto:
+          <select id="pr-ctx">
+            <option value="compras">Compras & cambio</option>
+            <option value="recetas">Recetas & proporciones</option>
+            <option value="deportes">Deportes & puntajes</option>
+            <option value="viaje">Viajes & distancias</option>
+          </select>
+        </label>
+        <button class="btn" id="pr-nuevo">Nuevo problema</button>
+      </div>
+      <div class="question" id="pr-enunciado">Pulsa «Nuevo problema»</div>
+      <details>
+        <summary>Guía de resolución</summary>
+        <ol>
+          <li><b>Entender:</b> ¿Qué se pregunta? subraya datos y unidades.</li>
+          <li><b>Planear:</b> elige la operación o estrategia (dibujo, tabla, ecuación).</li>
+          <li><b>Resolver:</b> calcula paso a paso.</li>
+          <li><b>Revisar:</b> ¿la respuesta tiene sentido? ¿unidades correctas?</li>
+        </ol>
+      </details>
+      <textarea id="pr-espacio" rows="5" style="width:100%; margin:10px 0" placeholder="Escribe tus pasos aquí (se guardan offline)"></textarea>
+      <div class="row">
+        <input id="pr-resp" type="text" inputmode="decimal" placeholder="Respuesta final"/>
+        <button class="btn" id="pr-verificar">Verificar</button>
+        <button class="btn sec" id="pr-pista">Pista</button>
+      </div>
+      <div id="pr-feedback" class="result" hidden></div>
+    </section>
+
+    <!-- VISTA: Reporte -->
+    <section id="reporte" class="view card" hidden>
+      <h2>Reporte / Evidencia para evaluación</h2>
+      <p>Este reporte resume desempeño, andamiaje y criterios de evaluación formativa. Puede <b>imprimirse</b> o <b>exportarse</b>.</p>
+      <div class="actions">
+        <button class="btn" id="btn-print">Imprimir / PDF</button>
+        <button class="btn sec" id="btn-export">Exportar progreso (.json)</button>
+        <input type="file" id="file-import" accept="application/json" style="display:none"/>
+        <button class="btn ghost" id="btn-import">Importar progreso</button>
+      </div>
+      <h3>Resumen</h3>
+      <table class="table" id="tabla-reporte">
+        <thead><tr><th>Módulo</th><th>Intentos</th><th>Aciertos</th><th>Precisión</th><th>Nivel (1–5)</th><th>Última fecha</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <h3>Rúbrica sugerida</h3>
+      <table class="table">
+        <thead><tr><th>Criterio</th><th>Descripción</th><th>Evidencia en app</th></tr></thead>
+        <tbody>
+          <tr><td>Dominio conceptual</td><td>Comprende procedimientos y conceptos clave de 5°</td><td>Precisión ≥70%, nivel ≥3</td></tr>
+          <tr><td>Estrategias de resolución</td><td>Aplica pasos, verifica unidades y sentido</td><td>Uso de pistas y pasos; notas en problemas</td></tr>
+          <tr><td>Metacognición</td><td>Reflexiona sobre errores y ajusta estrategias</td><td>Disminución de pistas con el tiempo</td></tr>
+          <tr><td>Autonomía</td><td>Gestiona ritmo y dificultad</td><td>Aumento de nivel adaptativo</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- VISTA: Memoria pedagógica -->
+    <section id="memoria" class="view card" hidden>
+      <h2>Memoria pedagógica (para sustentación)</h2>
+      <p><b>Propósito:</b> ofrecer una herramienta didáctica alineada a estándares de 5°, con fundamentos de evaluación formativa, andamiaje (Vigotsky), aprendizaje por descubrimiento guiado y principios de <i>Universal Design for Learning</i> (UDL).</p>
+      <h3>Decisiones de diseño</h3>
+      <ul>
+        <li><b>Generación aleatoria</b> de ítems: disminuye memorización y favorece transferencia.</li>
+        <li><b>Andamiaje</b> por pistas y pasos desplegables: apoyo contingente que puede retirarse.</li>
+        <li><b>Retroalimentación inmediata</b> con explicación del error esperado (p.ej., confundir área con perímetro).</li>
+        <li><b>Adaptatividad</b> simple: niveles 1–5 por módulo según racha de aciertos.</li>
+        <li><b>Registro offline</b>: métricas en localStorage, exportables para auditoría.</li>
+        <li><b>Accesibilidad</b>: navegación por teclado, contraste, textos alternativos.</li>
+      </ul>
+      <h3>Validez didáctica</h3>
+      <p>Los contenidos abarcan operaciones básicas, fracciones/decimales, geometría plana y volumen, conversión métrica y lectura de datos, coherentes con 5°. Las explicaciones priorizan lenguaje claro y ejemplos contextualizados (compras, recetas, deportes, viajes). La rúbrica promueve evaluación auténtica y metacognitiva.</p>
+      <h3>Uso recomendado</h3>
+      <ol>
+        <li>Diagnóstico inicial (10 min) en «Práctica rápida».</li>
+        <li>Trabajo guiado por módulos, registrando evidencias.</li>
+        <li>Sesión de problemas en contexto con bitácora (textarea).</li>
+        <li>Exportar JSON y anexar PDF del reporte como evidencia.</li>
+      </ol>
+      <p class="muted">Nota: la app no recaba datos personales ni requiere conexión. El SW permite recarga offline.</p>
+    </section>
+
+    <div class="foot">Yesenia Muñoz R. 100% Offline. © 2025</div>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+  //=========================
+  // UTILIDADES Y ESTADO
+  //=========================
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const state = {
+    vista: 'inicio',
+    progreso: JSON.parse(localStorage.getItem('m5_progreso')||'{}'),
+    current: {}
+  };
+  const save = () => localStorage.setItem('m5_progreso', JSON.stringify(state.progreso));
+  const nowISO = () => new Date().toISOString().slice(0,19).replace('T',' ');
+  function toast(msg){ const t=$('#toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 2200) }
+
+  function initModulo(mod){ if(!state.progreso[mod]) state.progreso[mod] = {intentos:0, aciertos:0, nivel:1, updated:null}; }
+  function updateKPI(){
+    const mods = ['operaciones','fracciones','geometria','medicion','problemas'];
+    const k = $('#kpi'); k.innerHTML='';
+    mods.forEach(m=>{ initModulo(m); const d=state.progreso[m];
+      const prec = d.intentos? Math.round((d.aciertos/d.intentos)*100):0;
+      const stars = '★'.repeat(Math.min(5, Math.max(1, d.nivel))) + '☆'.repeat(5-Math.min(5, Math.max(1,d.nivel)));
+      const cell = document.createElement('div'); cell.className='cell';
+      cell.innerHTML = `<div class="muted">${m}</div><b>${prec}%</b><div class="stars" aria-label="Nivel">${stars}</div>`;
+      k.appendChild(cell);
+    });
+  }
+  function pushReporte(mod, ok){ initModulo(mod); const d=state.progreso[mod]; d.intentos++; if(ok) d.aciertos++; d.updated=nowISO();
+    // Adaptatividad simple: sube nivel cada 3 aciertos seguidos, baja si 2 fallos seguidos
+    state.current.streak = state.current.streak || {ok:0, err:0};
+    if(ok){ state.current.streak.ok++; state.current.streak.err=0; if(state.current.streak.ok%3===0) d.nivel = Math.min(5, d.nivel+1) }
+    else { state.current.streak.err++; state.current.streak.ok=0; if(state.current.streak.err%2===0) d.nivel = Math.max(1, d.nivel-1) }
+    save(); updateKPI(); buildTablaReporte();
+  }
+  function buildTablaReporte(){ const tb=$('#tabla-reporte tbody'); tb.innerHTML='';
+    Object.entries(state.progreso).forEach(([mod,d])=>{
+      const prec = d.intentos? Math.round((d.aciertos/d.intentos)*100):0;
+      const tr=document.createElement('tr');
+      tr.innerHTML = `<td>${mod}</td><td>${d.intentos}</td><td>${d.aciertos}</td><td>${prec}%</td><td>${d.nivel}</td><td>${d.updated||''}</td>`;
+      tb.appendChild(tr);
+    })
+  }
+
+  //=========================
+  // NAVEGACIÓN
+  //=========================
+  function setView(v){ state.vista=v; $$('.view').forEach(s=>s.hidden = (s.id!==v));
+    $$('nav button').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
+    if(v==='reporte'){ buildTablaReporte(); }
+  }
+  $$('nav button').forEach(b=> b.addEventListener('click', ()=> setView(b.dataset.view)) );
+
+  //=========================
+  // OPERACIONES
+  //=========================
+  let opData=null;
+  function rnd(n,m){ return Math.floor(Math.random()*(m-n+1))+n }
+  function withDecimals(val, dec=2){ return Number(val.toFixed(dec)) }
+  function genOperacion(){
+    const tipo = $('#op-tipo').value; const dif = +$('#op-dif').value; let a,b, pregunta, ans, pasos=[];
+    const useDec = (dif===3);
+    if(tipo==='suma' || tipo==='resta'){
+      a = useDec? withDecimals(Math.random()* (dif===3? 200:99), 1) : rnd(10**(dif)-10, 10**dif-1);
+      b = useDec? withDecimals(Math.random()* (dif===3? 200:99), 1) : rnd(10**(dif)-10, 10**dif-1);
+      if(tipo==='resta' && a<b) [a,b]=[b,a];
+      ans = tipo==='suma'? withDecimals(a+b, useDec?1:0) : withDecimals(a-b, useDec?1:0);
+      pregunta = `${a} ${tipo==='suma'?'+':'−'} ${b} = ?`;
+      pasos = tipo==='suma'? [
+        'Alinea las cifras por columnas.',
+        'Suma unidades, luego decenas/centenas. Si la suma ≥10, llevas 1 a la siguiente columna.',
+        useDec? 'Alinea la coma decimal.':'',
+      ]:[
+        'Alinea por columnas.',
+        'Resta unidades, decenas, etc. Si no alcanza, pide prestado a la columna siguiente.',
+        useDec? 'Mantén la coma decimal alineada.':'',
+      ].filter(Boolean)
+    }
+    if(tipo==='mult'){
+      a = rnd(10**(dif)-10, 10**dif-1); b = dif===1? rnd(2,9): rnd(10, 10**(dif)-1);
+      ans = a*b; pregunta = `${a} × ${b} = ?`;
+      pasos = ['Multiplica por unidades y decenas.', 'Coloca ceros cuando corresponda.', 'Suma los productos parciales.']
+    }
+    if(tipo==='div'){
+      b = rnd(2,9); ans = rnd(10**(dif)-10, 10**dif-1); a = ans*b; // división exacta
+      pregunta = `${a} ÷ ${b} = ?`;
+      pasos = ['Divide de izquierda a derecha.', 'Multiplica y resta en cada paso.', 'Baja la siguiente cifra hasta terminar.']
+    }
+    opData = {pregunta, ans, pasos};
+    $('#op-pregunta').textContent = pregunta;
+    $('#op-feedback').hidden=true; $('#op-pasos').hidden=true; $('#op-resp').value='';
+  }
+  $('#op-nuevo').addEventListener('click', genOperacion);
+  $('#op-pista').addEventListener('click', ()=>{ $('#op-pasos').hidden=false; const ol=$('#op-lista-pasos'); ol.innerHTML=''; opData.pasos.forEach(p=>{const li=document.createElement('li'); li.textContent=p; ol.appendChild(li);}); });
+  $('#op-verificar').addEventListener('click', ()=>{
+    const val = $('#op-resp').value.replace(',','.'); const ok = Math.abs(Number(val) - Number(opData.ans)) < 1e-6;
+    const fb=$('#op-feedback'); fb.hidden=false; fb.className='result '+(ok?'ok':'err');
+    fb.textContent = ok? `¡Correcto! Resultado: ${opData.ans}`: `Revisa: la respuesta esperada es ${opData.ans}. Recuerda los pasos.`;
+    pushReporte('operaciones', ok);
+  });
+
+  //=========================
+  // FRACCIONES
+  //=========================
+  let frData=null;
+  function gcd(a,b){ return b? gcd(b, a%b): Math.abs(a) }
+  function simplify(n,d){ const g=gcd(n,d); return [n/g, d/g] }
+  function genFraccion(){
+    const act = $('#fr-actividad').value; let n1,d1,n2,d2, pregunta, ans, pasos=[];
+    if(act==='equiv'){
+      n1=rnd(1,9); d1=rnd(2,10); const k=rnd(2,9); n2=n1*k; d2=d1*k; pregunta=`Completa una fracción equivalente a ${n1}/${d1}. Escribe como n/d (ej. 2/3)`; ans=`${n2}/${d2}`; pasos=['Multiplica numerador y denominador por el mismo número.']
+    }
+    if(act==='simpl'){
+      const k=rnd(2,9); n1=rnd(1,9)*k; d1=rnd(2,10)*k; const s=simplify(n1,d1); pregunta=`Simplifica ${n1}/${d1}`; ans=`${s[0]}/${s[1]}`; pasos=['Busca un divisor común.','Divide numerador y denominador por el MCD.']
+    }
+    if(act==='suma'){
+      d1=rnd(2,10); n1=rnd(1,d1-1); n2=rnd(1,d1-1); pregunta=`${n1}/${d1} + ${n2}/${d1} = ? (n/d)`; const t=n1+n2; const s=simplify(t,d1); ans=`${s[0]}/${s[1]}`; pasos=['Suma numeradores con igual denominador.','Simplifica si es posible.']
+    }
+    if(act==='conv'){
+      const den=[2,4,5,10,20,25,50,100][rnd(0,7)]; const num=rnd(1,den-1); pregunta=`Convierte ${num}/${den} a decimal`; ans=(num/den).toFixed(2).replace(/\.00$/,''); pasos=['Divide numerador entre denominador.','Usa fracciones equivalentes a 10,100 para casos simples.']
+    }
+    frData = {pregunta, ans, pasos}; $('#fr-pregunta').textContent=pregunta; $('#fr-feedback').hidden=true; $('#fr-pasos').hidden=true; $('#fr-resp').value='';
+  }
+  $('#fr-nuevo').addEventListener('click', genFraccion);
+  $('#fr-pista').addEventListener('click', ()=>{ $('#fr-pasos').hidden=false; const ol=$('#fr-lista-pasos'); ol.innerHTML=''; frData.pasos.forEach(p=>{const li=document.createElement('li'); li.textContent=p; ol.appendChild(li);}); });
+  $('#fr-verificar').addEventListener('click', ()=>{
+    let val = $('#fr-resp').value.trim().replace(' ','');
+    const ok = val===frData.ans; const fb=$('#fr-feedback'); fb.hidden=false; fb.className='result '+(ok?'ok':'err');
+    fb.textContent = ok? `¡Bien! ${frData.ans}`: `Respuesta esperada: ${frData.ans}`;
+    pushReporte('fracciones', ok);
+  });
+
+  //=========================
+  // GEOMETRÍA
+  //=========================
+  let geoData=null;
+  function genGeo(){ const act=$('#geo-actividad').value; let a,b,h, pregunta, ans, pasos=[];
+    if(act==='per-rect'){ a=rnd(2,30); b=rnd(2,30); pregunta=`Rectángulo de ${a} cm por ${b} cm. ¿Perímetro en cm?`; ans=2*(a+b); pasos=['Suma largo + ancho y multiplica por 2.'] }
+    if(act==='area-rect'){ a=rnd(2,30); b=rnd(2,30); pregunta=`Rectángulo de ${a} m por ${b} m. ¿Área en m²?`; ans=a*b; pasos=['Multiplica base × altura. Unidades m².'] }
+    if(act==='area-tri'){ a=rnd(2,30); h=rnd(2,30); pregunta=`Triángulo base ${a} cm y altura ${h} cm. ¿Área en cm²?`; ans=(a*h)/2; pasos=['Área = (base × altura) ÷ 2.'] }
+    if(act==='vol-prisma'){ a=rnd(2,15); b=rnd(2,15); h=rnd(2,15); pregunta=`Prisma rectangular ${a}×${b}×${h} cm. ¿Volumen en cm³?`; ans=a*b*h; pasos=['Volumen = largo × ancho × alto. Unidades cm³.'] }
+    geoData={pregunta, ans, pasos}; $('#geo-pregunta').textContent=pregunta; $('#geo-feedback').hidden=true; $('#geo-pasos').hidden=true; $('#geo-resp').value='';
+  }
+  $('#geo-nuevo').addEventListener('click', genGeo);
+  $('#geo-pista').addEventListener('click', ()=>{ $('#geo-pasos').hidden=false; const ol=$('#geo-lista-pasos'); ol.innerHTML=''; geoData.pasos.forEach(p=>{const li=document.createElement('li'); li.textContent=p; ol.appendChild(li);}); });
+  $('#geo-verificar').addEventListener('click', ()=>{
+    const val = Number($('#geo-resp').value.replace(',','.')); const ok = Math.abs(val - Number(geoData.ans)) < 1e-6;
+    const fb=$('#geo-feedback'); fb.hidden=false; fb.className='result '+(ok?'ok':'err');
+    fb.textContent = ok? `¡Correcto! ${geoData.ans}`: `Atención: esperábamos ${geoData.ans}. Revisa fórmula y unidades.`;
+    pushReporte('geometria', ok);
+  });
+
+  //=========================
+  // MEDICIÓN & DATOS
+  //=========================
+  let meData=null;
+  const conv = {
+    long:[['mm','cm',0.1],['cm','m',0.01],['m','km',0.001]],
+    masa:[['g','kg',0.001]],
+    cap:[['mL','L',0.001]]
+  };
+  function genMedicion(){ const act=$('#me-actividad').value; let pregunta, ans, pasos=[];
+    if(act.startsWith('conv')){
+      const tipo = act==='conv-long'? 'long' : act==='conv-masa'? 'masa' : 'cap';
+      const r = conv[tipo][rnd(0, conv[tipo].length-1)];
+      const val = rnd(2, 9000); // valor de partida
+      pregunta = `Convierte ${val} ${r[0]} a ${r[1]}`; ans = (val * r[2]).toString(); pasos=['Identifica unidades.','Aplica factor de conversión.','Verifica magnitud (¿más grande o más pequeña?).']
+    }
+    if(act==='grafico'){
+      const categorias=['A','B','C','D','E']; const datos=categorias.map(()=>rnd(2,12));
+      meData={graf:{categorias, datos}}; drawBarChart(categorias, datos);
+      const idx=rnd(0,categorias.length-1); pregunta=`En el gráfico, ¿cuánto vale la categoría ${categorias[idx]}?`; ans=String(meData.graf.datos[idx]); pasos=['Lee el alto de la barra.','Cuenta las unidades del eje Y.']
+    }
+    meData = Object.assign(meData||{}, {pregunta, ans, pasos});
+    $('#me-pregunta').textContent=pregunta; $('#me-feedback').hidden=true; $('#me-pasos').hidden=true; $('#me-resp').value='';
+  }
+  function drawBarChart(labels, values){ const c=$('#me-chart'); const ctx=c.getContext('2d');
+    ctx.clearRect(0,0,c.width,c.height);
+    const pad=40; const w=c.width - pad*2; const h=c.height - pad*2; const max=Math.max(...values)+2; const barW = w/values.length * .7; const gap = w/values.length * .3;
+    // ejes
+    ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(pad,pad); ctx.lineTo(pad, pad+h); ctx.lineTo(pad+w, pad+h); ctx.stroke();
+    // barras
+    values.forEach((v,i)=>{
+      const x = pad + i*(barW+gap) + gap/2; const bh = (v/max)*h; const y = pad+h - bh;
+      ctx.fillStyle = 'rgba(96,165,250,.8)'; ctx.fillRect(x,y,barW,bh);
+      ctx.fillStyle = '#e5e7eb'; ctx.textAlign='center'; ctx.fillText(labels[i], x+barW/2, pad+h+16);
+      ctx.fillText(v, x+barW/2, y-6);
+    });
+  }
+  $('#me-nuevo').addEventListener('click', genMedicion);
+  $('#me-pista').addEventListener('click', ()=>{ $('#me-pasos').hidden=false; const ol=$('#me-lista-pasos'); ol.innerHTML=''; meData.pasos.forEach(p=>{const li=document.createElement('li'); li.textContent=p; ol.appendChild(li);}); });
+  $('#me-verificar').addEventListener('click', ()=>{
+    const val = $('#me-resp').value.trim(); const ok = val===String(meData.ans);
+    const fb=$('#me-feedback'); fb.hidden=false; fb.className='result '+(ok?'ok':'err');
+    fb.textContent = ok? `¡Correcto! ${meData.ans}`: `Pista: verifica factor y unidades. Esperado: ${meData.ans}`;
+    pushReporte('medicion', ok);
+  });
+
+  //=========================
+  // PROBLEMAS EN CONTEXTO
+  //=========================
+  let prData=null;
+  function genProblema(){ const ctx=$('#pr-ctx').value; let enun, ans, pista;
+    if(ctx==='compras'){
+      const precio = rnd(1000,9000); const cant=rnd(2,9); const pago=[10000,20000,50000][rnd(0,2)];
+      const total=precio*cant; const cambio=pago-total; enun=`En una tienda, cada cuaderno cuesta $${precio}. Compras ${cant}. Pagas con $${pago}. ¿Cuánto cambio recibes?`; ans=String(cambio);
+      pista='Calcula total = precio × cantidad. Luego pago − total.'
+    }
+    if(ctx==='recetas'){
+      const rinde=rnd(2,6); const por=rnd(2,4); const azu=rnd(100,300); const req = Math.round(azu*por/rinde);
+      enun=`Una receta para ${rinde} porciones usa ${azu} g de azúcar. Si quieres ${por} porciones, ¿cuántos gramos necesitas?`; ans=String(req);
+      pista='Usa proporción directa: (nuevo = base × porciones nuevas ÷ porciones base).'
+    }
+    if(ctx==='deportes'){
+      const g=rnd(0,5), e=rnd(0,5), p=rnd(0,5); const pts=3*g+1*e; enun=`En un torneo dan 3 puntos por ganar y 1 por empatar. Un equipo lleva ${g} victorias, ${e} empates y ${p} derrotas. ¿Puntos totales?`; ans=String(pts);
+      pista='Total = 3×victorias + 1×empates + 0×derrotas.'
+    }
+    if(ctx==='viaje'){
+      const vel=rnd(30,90), tiempo=rnd(1,5); const dist=vel*tiempo; enun=`Un bus viaja a ${vel} km/h durante ${tiempo} h. ¿Cuántos km recorre?`; ans=String(dist);
+      pista='Distancia = velocidad × tiempo.'
+    }
+    prData={enun, ans, pista}; $('#pr-enunciado').textContent=enun; $('#pr-resp').value=''; $('#pr-feedback').hidden=true;
+  }
+  $('#pr-nuevo').addEventListener('click', genProblema);
+  $('#pr-pista').addEventListener('click', ()=>{ toast('Pista: '+prData.pista) });
+  $('#pr-verificar').addEventListener('click', ()=>{
+    const val=$('#pr-resp').value.trim(); const ok = val===prData.ans; const fb=$('#pr-feedback'); fb.hidden=false; fb.className='result '+(ok?'ok':'err');
+    fb.textContent = ok? '¡Excelente! Estrategia correcta.': `Revisa unidades y cálculo. Resultado esperado: ${prData.ans}`;
+    pushReporte('problemas', ok);
+  });
+  $('#pr-espacio').addEventListener('input', ()=> localStorage.setItem('m5_bitacora', $('#pr-espacio').value) );
+
+  //=========================
+  // REPORTE: imprimir/exportar/importar
+  //=========================
+  $('#btn-print').addEventListener('click', ()=> window.print());
+  $('#btn-export').addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify(state.progreso,null,2)], {type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='progreso_matematicas5.json'; a.click();
+  });
+  $('#btn-import').addEventListener('click', ()=> $('#file-import').click());
+  $('#file-import').addEventListener('change', async (e)=>{
+    const file=e.target.files[0]; if(!file) return; const txt=await file.text(); try{ state.progreso=JSON.parse(txt); save(); updateKPI(); buildTablaReporte(); toast('Progreso importado.'); }catch(err){ alert('Archivo inválido'); }
+  });
+
+  //=========================
+  // INICIO Y SW
+  //=========================
+  $('#btn-demo').addEventListener('click', ()=>{ setView('operaciones'); genOperacion(); });
+  $('#btn-clear').addEventListener('click', ()=>{ if(confirm('¿Borrar todo el progreso guardado en este dispositivo?')){ localStorage.removeItem('m5_progreso'); localStorage.removeItem('m5_bitacora'); location.reload(); } });
+  $('#modo-docente').addEventListener('change', (e)=>{ document.body.dataset.docente = e.target.checked? '1':'0'; toast(e.target.checked? 'Modo docente ACTIVADO':'Modo docente DESACTIVADO'); })
+
+  // restaurar bitácora
+  $('#pr-espacio').value = localStorage.getItem('m5_bitacora')||'';
+  updateKPI();
+
+  // === Manifest dinámico y Service Worker para recarga offline ===
+  (function setupPWA(){
+    const manifest = {
+      name: 'Matemáticas 5° — Offline', short_name:'Mate5 Offline', start_url: '.', display:'standalone', background_color:'#0f172a', theme_color:'#22c55e', icons: []
+    };
+    const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+    const url = URL.createObjectURL(blob); document.getElementById('dyn-manifest').setAttribute('href', url);
+    // Service Worker minimalista en línea
+    const swCode = `self.addEventListener('install', e=>{ e.waitUntil(caches.open('mate5-v1').then(c=>c.addAll(['./']))); self.skipWaiting(); });
+      self.addEventListener('activate', e=>{ e.waitUntil(self.clients.claim()); });
+      self.addEventListener('fetch', e=>{ e.respondWith(caches.match(e.request).then(r=> r || fetch(e.request).then(res=>{ const copy=res.clone(); caches.open('mate5-v1').then(c=>c.put(e.request, copy)).catch(()=>{}); return res; }).catch(()=>caches.match('./')) )); });`;
+    const swBlob = new Blob([swCode], {type:'text/javascript'});
+    const swURL = URL.createObjectURL(swBlob);
+    if('serviceWorker' in navigator){ navigator.serviceWorker.register(swURL).catch(()=>{}); }
+  })();
+  </script>
+</body>
+</html>
