@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fraccionarios 5° – Actividad Interactiva "Yesenia Muñoz Ruiz" (Archivo Único)</title>
+  <style>
+    :root{
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --ink: #222;
+      --muted:#6b7280;
+      --brand:#2563eb;
+      --ok:#16a34a;
+      --warn:#d97706;
+      --bad:#dc2626;
+      --shadow: 0 10px 20px rgba(0,0,0,.06);
+      --radius: 16px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial; background:var(--bg); color:var(--ink);}
+    header{
+      position:sticky;top:0;z-index:5;background:linear-gradient(180deg,var(--card),rgba(255,255,255,.7));backdrop-filter: blur(6px);
+      border-bottom:1px solid #eef2f7;
+    }
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+    h1{font-size:clamp(20px,2.2vw,28px);margin:6px 0 2px}
+    .sub{color:var(--muted);margin:4px 0 12px}
+
+    .grid{display:grid;gap:16px;grid-template-columns: 1fr;}
+    @media (min-width: 980px){.grid{grid-template-columns: 1.2fr .8fr}}
+
+    .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    select, input[type="number"], button, input[type="text"]{
+      padding:10px 12px;border-radius:12px;border:1px solid #dbe2ea;background:white;color:var(--ink);
+      font-size:14px;outline:none
+    }
+    button{background:var(--brand);color:white;border:none;cursor:pointer;transition:.15s transform ease}
+    button:hover{transform: translateY(-1px)}
+    button.ghost{background:#eef2ff;color:#1f3c8a}
+    button.flat{background:#f1f5f9;color:#0f172a}
+    button.ok{background:var(--ok)}
+    button.bad{background:var(--bad)}
+
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .q{font-size:18px}
+    .big{font-size:22px;font-weight:700}
+    .mono{font-variant-numeric: tabular-nums}
+
+    .area{min-height:240px;border:1px dashed #e5e7eb;border-radius:12px;padding:14px;display:grid;place-items:center;background:#fafcff}
+
+    .score{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+    .pill{padding:6px 10px;border-radius:999px;background:#eef2f7;color:#0f172a;font-weight:600}
+    .pill.ok{background:#e8f7ee;color:#065f46}
+    .pill.bad{background:#feecef;color:#7f1d1d}
+    .muted{color:var(--muted)}
+
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 4px}
+    .tab{padding:8px 12px;border-radius:999px;background:#f1f5f9;cursor:pointer;font-weight:600}
+    .tab[aria-selected="true"]{background:#1f2937;color:white}
+
+    .foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;color:var(--muted)}
+
+    .svgbar{width:min(520px,92vw);height:80px}
+    .svgpie{width:120px;height:120px}
+
+    .help{background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:10px}
+    details summary{cursor:pointer}
+
+    .good{color:var(--ok)}
+    .badc{color:var(--bad)}
+    .warn{color:var(--warn)}
+
+    .hidden{display:none !important}
+    label{font-size:13px;color:#334155}
+    hr{border:none;border-top:1px solid #eef2f7;margin:12px 0}
+    .small{font-size:12px}
+    .kbd{border:1px solid #cbd5e1;border-bottom-width:2px;padding:2px 6px;border-radius:6px;background:white;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,"Liberation Mono","Courier New", monospace}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Fraccionarios – Actividad Interactiva (5°)</h1>
+      <div class="sub">Practica con representaciones visuales, ejercicios aleatorios, pistas y registro de progreso. Funciona <strong>offline</strong>.</div>
+    </div>
+  </header>
+
+  <main class="wrap grid" id="app">
+    <section class="card">
+      <div class="tabs" role="tablist" aria-label="Modos de práctica">
+        <button class="tab" role="tab" data-mode="modela" aria-selected="true">Modela</button>
+        <button class="tab" role="tab" data-mode="equiv">Equivalencias</button>
+        <button class="tab" role="tab" data-mode="simpl">Simplificar</button>
+        <button class="tab" role="tab" data-mode="comp">Comparar</button>
+        <button class="tab" role="tab" data-mode="suma">Suma/Resta</button>
+        <button class="tab" role="tab" data-mode="reto">Reto mixto</button>
+      </div>
+
+      <div class="toolbar" id="toolbar">
+        <div class="row">
+          <label>Máx. denominador
+            <input id="maxDen" type="number" min="2" max="50" value="12" style="width:90px" />
+          </label>
+          <label>Tiempo (min)
+            <input id="mins" type="number" min="0" max="60" value="0" style="width:90px" />
+          </label>
+          <button id="nuevo">Nueva actividad</button>
+          <button id="pista" class="ghost">Pista</button>
+          <button id="verSol" class="flat">Ver solución</button>
+        </div>
+      </div>
+
+      <div class="area" id="zona">
+        <!-- Aquí se dibuja la actividad -->
+      </div>
+
+      <div class="foot">
+        <div id="retro" aria-live="polite"></div>
+        <div class="row">
+          <button id="comprobar" class="ok">Comprobar</button>
+          <button id="siguiente" class="ghost">Siguiente ▶</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="card">
+      <h3 style="margin-top:4px">Progreso</h3>
+      <div class="score" id="score">
+        <span class="pill">Intentos: <span id="intentos" class="mono">0</span></span>
+        <span class="pill ok">Aciertos: <span id="aciertos" class="mono">0</span></span>
+        <span class="pill bad">Errores: <span id="errores" class="mono">0</span></span>
+        <span class="pill">Racha: <span id="racha" class="mono">0</span> 🔥</span>
+      </div>
+
+      <hr>
+      <details>
+        <summary><strong>Modo docente</strong> (opciones)</summary>
+        <div class="small" style="margin-top:8px">
+          <label>Tipos en Reto mixto:</label>
+          <div class="row" style="gap:6px">
+            <label><input type="checkbox" class="chk" data-t="modela" checked> Modela</label>
+            <label><input type="checkbox" class="chk" data-t="equiv" checked> Equivalencias</label>
+            <label><input type="checkbox" class="chk" data-t="simpl" checked> Simplificar</label>
+            <label><input type="checkbox" class="chk" data-t="comp" checked> Comparar</label>
+            <label><input type="checkbox" class="chk" data-t="suma" checked> Suma/Resta</label>
+          </div>
+          <div style="margin-top:8px" class="row">
+            <button id="exportar" class="flat">Exportar resultados (CSV)</button>
+            <button id="reset" class="flat">Reiniciar progreso</button>
+          </div>
+        </div>
+      </details>
+
+      <div class="help" style="margin-top:12px">
+        <details open>
+          <summary><strong>¿Cómo usar?</strong></summary>
+          <ul class="small">
+            <li>Elige un modo arriba o usa <span class="kbd">Reto mixto</span>.</li>
+            <li>Opcional: define el <em>máximo denominador</em> y un <em>tiempo</em>.</li>
+            <li>Responde, pulsa <strong>Comprobar</strong> y luego <strong>Siguiente</strong>.</li>
+            <li>Usa <strong>Pista</strong> o <strong>Ver solución</strong> cuando lo necesites.</li>
+          </ul>
+        </details>
+      </div>
+
+      <div class="small muted" style="margin-top:8px">Hecho con ♥ para 5° – Sin internet. Guarda progreso en este dispositivo.</div>
+    </aside>
+  </main>
+
+  <template id="tpl-modela">
+    <div>
+      <div class="q">Ajusta la fracción moviendo el control para representar: <span class="big" id="tgtFrac"></span></div>
+      <div class="row" style="margin-top:10px">
+        <label>Denominador: <span id="denM"></span></label>
+        <input type="range" id="rngM" min="0" value="0" />
+        <span><strong id="valM">0</strong>/<span id="denL">0</span></span>
+      </div>
+      <div class="row" style="margin-top:4px">
+        <svg class="svgbar" id="barM" aria-label="Barra de fracción"></svg>
+        <svg class="svgpie" id="pieM" aria-label="Círculo de fracción"></svg>
+      </div>
+      <div class="small muted">También verás decimal y porcentaje al comprobar.</div>
+    </div>
+  </template>
+
+  <template id="tpl-equivalencias">
+    <div>
+      <div class="q">Completa una fracción <em>equivalente</em> a <span class="big" id="eqBase"></span>:</div>
+      <div class="row" style="margin-top:10px">
+        <span class="big mono" id="eqLeft">a/b =</span>
+        <input type="number" id="eqNum" placeholder="?" style="width:90px" />
+        <span class="big">/</span>
+        <input type="number" id="eqDen" placeholder="?" style="width:90px" />
+      </div>
+      <div id="equivVis" style="margin-top:8px"></div>
+    </div>
+  </template>
+
+  <template id="tpl-simplificar">
+    <div>
+      <div class="q">Escribe la <em>fracción simplificada</em> (irreducible) de <span class="big" id="simBase"></span>:</div>
+      <div class="row" style="margin-top:10px">
+        <input type="number" id="simNum" placeholder="numerador" style="width:120px" />
+        <span class="big">/</span>
+        <input type="number" id="simDen" placeholder="denominador" style="width:120px" />
+      </div>
+      <div class="small muted">Consejo: divide numerador y denominador entre su MCD.</div>
+    </div>
+  </template>
+
+  <template id="tpl-comparar">
+    <div>
+      <div class="q">Elige el símbolo correcto para comparar: <span class="big" id="cmpA"></span> <select id="cmpSel"><option value="<"><</option><option value=">">></option><option value="=">=</option></select> <span class="big" id="cmpB"></span></div>
+      <div class="row" style="margin-top:10px">
+        <svg class="svgbar" id="barA"></svg>
+        <svg class="svgbar" id="barB"></svg>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-suma">
+    <div>
+      <div class="q">Resuelve y simplifica si es posible: <span class="big" id="sumExp"></span></div>
+      <div class="row" style="margin-top:10px">
+        <input type="number" id="sumNum" placeholder="numerador" style="width:120px" />
+        <span class="big">/</span>
+        <input type="number" id="sumDen" placeholder="denominador" style="width:120px" />
+      </div>
+      <div id="sumVis" style="margin-top:8px"></div>
+    </div>
+  </template>
+
+  <template id="tpl-reto">
+    <div>
+      <div class="q">¡Reto mixto! Resuelve lo que aparezca 👇</div>
+      <div id="retoBox" style="margin-top:8px"></div>
+    </div>
+  </template>
+
+  <script>
+    // Utilidades de fracciones
+    const rnd = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
+    const mcd = (a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b]}return a||1};
+    const mcm = (a,b)=> Math.abs(a*b)/mcd(a,b);
+    const simp = (n,d)=>{const g=mcd(n,d);return [n/g,d/g]};
+
+    const fracStr = (n,d)=> `${n}/${d}`;
+    const toDec = (n,d)=> (n/d);
+    const toPct = (n,d)=> (n/d*100);
+
+    const rfrac = (maxDen=12)=>{
+      const d = rnd(2,maxDen);
+      const n = rnd(1,d-1);
+      return [n,d];
+    };
+
+    const drawBar = (el,n,d)=>{
+      const W = Math.min(520, window.innerWidth*0.9), H=80;
+      el.setAttribute('viewBox',`0 0 ${W} ${H}`);
+      el.innerHTML='';
+      const segW = (W-10)/d, pad=5;
+      // fondo
+      const bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      bg.setAttribute('x',5);bg.setAttribute('y',20);bg.setAttribute('rx',8);bg.setAttribute('ry',8);
+      bg.setAttribute('width',W-10);bg.setAttribute('height',40);bg.setAttribute('fill','#f1f5f9');
+      el.appendChild(bg);
+      for(let i=0;i<d;i++){
+        const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
+        r.setAttribute('x',5+i*segW);r.setAttribute('y',20);
+        r.setAttribute('width',segW-2);r.setAttribute('height',40);
+        r.setAttribute('fill', i<n ? '#60a5fa' : 'white');
+        r.setAttribute('stroke','#cbd5e1');
+        el.appendChild(r);
+      }
+      // texto
+      const tx = document.createElementNS('http://www.w3.org/2000/svg','text');
+      tx.setAttribute('x',W/2);tx.setAttribute('y',16);tx.setAttribute('text-anchor','middle');tx.setAttribute('font-size','14');tx.textContent= `${n}/${d}`;
+      el.appendChild(tx);
+    };
+
+    const drawPie = (el,n,d)=>{
+      const size=120, R=52, CX=60, CY=60;
+      el.setAttribute('viewBox','0 0 120 120');
+      el.innerHTML='';
+      const bg = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      bg.setAttribute('cx',CX);bg.setAttribute('cy',CY);bg.setAttribute('r',R);bg.setAttribute('fill','#f1f5f9');bg.setAttribute('stroke','#cbd5e1');
+      el.appendChild(bg);
+      for(let i=0;i<d;i++){
+        const ang0 = -Math.PI/2 + i*(2*Math.PI/d);
+        const ang1 = -Math.PI/2 + (i+1)*(2*Math.PI/d);
+        const large= ang1-ang0>Math.PI ? 1:0;
+        const x0=CX+R*Math.cos(ang0), y0=CY+R*Math.sin(ang0);
+        const x1=CX+R*Math.cos(ang1), y1=CY+R*Math.sin(ang1);
+        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+        const fill = i<n? '#60a5fa':'white';
+        path.setAttribute('d',`M ${CX} ${CY} L ${x0} ${y0} A ${R} ${R} 0 ${large} 1 ${x1} ${y1} Z`);
+        path.setAttribute('fill',fill);path.setAttribute('stroke','#cbd5e1');
+        el.appendChild(path);
+      }
+      const tx = document.createElementNS('http://www.w3.org/2000/svg','text');
+      tx.setAttribute('x',CX);tx.setAttribute('y',CY+4);tx.setAttribute('text-anchor','middle');tx.setAttribute('font-size','14');tx.textContent= `${Math.round(toPct(n,d))}%`;
+      el.appendChild(tx);
+    };
+
+    // Estado
+    const state = {
+      mode:'modela',
+      maxDen:12,
+      timerMins:0,
+      current:null,
+      log:[],
+      streak:0,
+      counts:{tries:0,hits:0,miss:0}
+    };
+
+    // Persistencia simple
+    const loadSave=()=>{
+      try{const raw=localStorage.getItem('frac5_save');if(!raw) return; const s=JSON.parse(raw); Object.assign(state,s);}catch(e){}
+    }
+    const save=()=>{localStorage.setItem('frac5_save', JSON.stringify({counts:state.counts,streak:state.streak,log:state.log.slice(-200)}))}
+
+    // UI refs
+    const zona = document.getElementById('zona');
+    const retro = document.getElementById('retro');
+    const intentos = document.getElementById('intentos');
+    const aciertos = document.getElementById('aciertos');
+    const errores = document.getElementById('errores');
+    const racha = document.getElementById('racha');
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(b=>{
+      b.addEventListener('click',()=>{
+        document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected','false'));
+        b.setAttribute('aria-selected','true');
+        state.mode = b.dataset.mode;
+        nueva();
+      })
+    })
+
+    // Controles
+    document.getElementById('maxDen').addEventListener('input',e=>{state.maxDen = +e.target.value});
+    document.getElementById('mins').addEventListener('input',e=>{state.timerMins = +e.target.value});
+    document.getElementById('nuevo').addEventListener('click',()=>nueva());
+    document.getElementById('pista').addEventListener('click',()=>pista());
+    document.getElementById('verSol').addEventListener('click',()=>verSol());
+    document.getElementById('comprobar').addEventListener('click',()=>comprobar());
+    document.getElementById('siguiente').addEventListener('click',()=>nueva());
+    document.getElementById('exportar').addEventListener('click',()=>exportarCSV());
+    document.getElementById('reset').addEventListener('click',()=>{localStorage.removeItem('frac5_save'); location.reload()});
+
+    // Timer
+    let tHandle=null, deadline=null;
+    function startTimer(){
+      if(tHandle) clearInterval(tHandle);
+      const m = state.timerMins;
+      if(!m){document.title='Fraccionarios 5°';return}
+      deadline = Date.now() + m*60*1000;
+      tHandle = setInterval(()=>{
+        const rem = Math.max(0, Math.floor((deadline-Date.now())/1000));
+        const mm = String(Math.floor(rem/60)).padStart(2,'0');
+        const ss = String(rem%60).padStart(2,'0');
+        document.title = `⏱️ ${mm}:${ss} – Fraccionarios 5°`;
+        if(rem===0){clearInterval(tHandle); retro.innerHTML = '<span class="warn">⏱️ ¡Tiempo! Puedes seguir practicando sin cronómetro.</span>'}
+      },250);
+    }
+
+    // Generadores por modo
+    function nueva(){
+      retro.textContent='';
+      startTimer();
+      switch(state.mode){
+        case 'modela': renderModela(); break;
+        case 'equiv': renderEquiv(); break;
+        case 'simpl': renderSimpl(); break;
+        case 'comp': renderComp(); break;
+        case 'suma': renderSuma(); break;
+        case 'reto': renderReto(); break;
+      }
+    }
+
+    // MODELO: MODELAR
+    function renderModela(){
+      zona.innerHTML = document.getElementById('tpl-modela').innerHTML;
+      const [n,d] = rfrac(state.maxDen); state.current={type:'modela', n,d};
+      document.getElementById('tgtFrac').textContent = fracStr(n,d);
+      const rng = document.getElementById('rngM');
+      rng.max = d; rng.value = 0;
+      document.getElementById('denM').textContent = d;
+      document.getElementById('denL').textContent = d;
+      const bar = document.getElementById('barM');
+      const pie = document.getElementById('pieM');
+      const val = document.getElementById('valM');
+      const update=()=>{ val.textContent = rng.value; drawBar(bar, +rng.value, d); drawPie(pie, +rng.value, d) };
+      rng.addEventListener('input', update);
+      update();
+    }
+
+    // EQUIVALENCIAS
+    function renderEquiv(){
+      zona.innerHTML = document.getElementById('tpl-equivalencias').innerHTML;
+      const [n,d] = rfrac(state.maxDen);
+      // Elegir factor para ocultar
+      const k = rnd(2, Math.max(3, Math.min(6, Math.floor(24/d))))
+      const n2 = n*k, d2 = d*k;
+      state.current={type:'equiv', base:[n,d], target:[n2,d2]};
+      document.getElementById('eqBase').textContent = fracStr(n,d);
+      document.getElementById('eqLeft').textContent = `${n}/${d} =`;
+      const v = document.getElementById('equivVis');
+      const sbarA = document.createElementNS('http://www.w3.org/2000/svg','svg'); sbarA.classList.add('svgbar');
+      const sbarB = document.createElementNS('http://www.w3.org/2000/svg','svg'); sbarB.classList.add('svgbar');
+      v.appendChild(sbarA); v.appendChild(sbarB);
+      drawBar(sbarA,n,d); drawBar(sbarB,n2,d2);
+    }
+
+    // SIMPLIFICAR
+    function renderSimpl(){
+      zona.innerHTML = document.getElementById('tpl-simplificar').innerHTML;
+      let [n,d] = rfrac(state.maxDen);
+      const k = rnd(2,5); n*=k; d*=k; // hacerla reducible
+      state.current={type:'simpl', base:[n,d], ans:simp(n,d)};
+      document.getElementById('simBase').textContent = fracStr(n,d);
+    }
+
+    // COMPARAR
+    function renderComp(){
+      zona.innerHTML = document.getElementById('tpl-comparar').innerHTML;
+      const [a1,b1] = rfrac(state.maxDen);
+      let a2,b2; do{[a2,b2]=rfrac(state.maxDen)} while(a1/b1===a2/b2);
+      state.current={type:'comp', A:[a1,b1], B:[a2,b2], rel: a1/b1<a2/b2? '<' : (a1/b1>a2/b2? '>' :'=') };
+      document.getElementById('cmpA').textContent=fracStr(a1,b1);
+      document.getElementById('cmpB').textContent=fracStr(a2,b2);
+      drawBar(document.getElementById('barA'),a1,b1);
+      drawBar(document.getElementById('barB'),a2,b2);
+    }
+
+    // SUMA/RESTA
+    function renderSuma(){
+      zona.innerHTML = document.getElementById('tpl-suma').innerHTML;
+      let same = Math.random()<0.5;
+      let a,b,c,d;
+      if(same){
+        [b]=[rnd(2,state.maxDen)]; a=rnd(1,b-1); c=rnd(1,b-1); d=b; var op = Math.random()<0.5? '+':'-';
+        if(op==='-' && a<c){ [a,c]=[c,a] } // evitar negativo
+      }else{
+        b=rnd(2,Math.max(6,Math.min(12,state.maxDen))); d=rnd(2,Math.max(6,Math.min(12,state.maxDen)));
+        a=rnd(1,b-1); c=rnd(1,d-1); op = Math.random()<0.7? '+':'-';
+        if(op==='-' && a/b < c/d){ // evitar negativo
+          [a,b,c,d]=[c,d,a,b];
+        }
+      }
+      state.current={type:'suma',expr:[a,b,op,c,d]};
+      document.getElementById('sumExp').textContent=`${a}/${b} ${op} ${c}/${d}`;
+      // visual LCM barras
+      const vis = document.getElementById('sumVis');
+      const l = mcm(b,d); const fa=l/b, fb=l/d;
+      const svga=document.createElementNS('http://www.w3.org/2000/svg','svg'); svga.classList.add('svgbar');
+      const svgb=document.createElementNS('http://www.w3.org/2000/svg','svg'); svgb.classList.add('svgbar');
+      vis.appendChild(svga); vis.appendChild(svgb);
+      drawBar(svga,a*fa,l); drawBar(svgb,(op==='+')? c*fb : c*fb, l);
+    }
+
+    // RETO MIXTO
+    function renderReto(){
+      zona.innerHTML = document.getElementById('tpl-reto').innerHTML;
+      const types = Array.from(document.querySelectorAll('.chk:checked')).map(ch=>ch.dataset.t);
+      const pool = types.length? types : ['modela','equiv','simpl','comp','suma'];
+      const pick = pool[rnd(0,pool.length-1)];
+      state.mode = pick;
+      // Render dentro del contenedor de reto
+      switch(pick){
+        case 'modela': renderModela(); break;
+        case 'equiv': renderEquiv(); break;
+        case 'simpl': renderSimpl(); break;
+        case 'comp': renderComp(); break;
+        case 'suma': renderSuma(); break;
+      }
+    }
+
+    // PISTAS y SOLUCIONES
+    function pista(){
+      const c = state.current; if(!c) return;
+      if(c.type==='modela'){
+        retro.innerHTML = 'Cuenta las partes azules hasta llegar al numerador. Puedes usar la barra o el círculo.';
+      }else if(c.type==='equiv'){
+        const [n,d]=c.base; const f = c.target[0]/n; retro.innerHTML = `Multiplica numerador y denominador por <strong>${f}</strong> (o divide si vas al revés).`;
+      }else if(c.type==='simpl'){
+        const [n,d]=c.base; const g=mcd(n,d); retro.innerHTML = `El MCD de ${n} y ${d} es <strong>${g}</strong>. Divide ambos por ${g}.`;
+      }else if(c.type==='comp'){
+        retro.innerHTML = 'Convierte a decimales o usa denominador común. Observa las barras.';
+      }else if(c.type==='suma'){
+        const [a,b,op,c2,d]=c.expr; const l=mcm(b,d); retro.innerHTML = `Usa el m.c.m. de ${b} y ${d} que es <strong>${l}</strong>.`;
+      }
+    }
+
+    function verSol(){
+      const c = state.current; if(!c) return;
+      let text='';
+      if(c.type==='modela'){
+        text = `Debes mover hasta <strong>${c.n}/${c.d}</strong> = <strong>${(toDec(c.n,c.d)).toFixed(2)}</strong> = <strong>${Math.round(toPct(c.n,c.d))}%</strong>`;
+      } else if(c.type==='equiv'){
+        text = `${c.base[0]}/${c.base[1]} × ${c.target[0]/c.base[0]} = <strong>${c.target[0]}/${c.target[1]}</strong>`;
+      } else if(c.type==='simpl'){
+        text = `La forma irreducible es <strong>${c.ans[0]}/${c.ans[1]}</strong>`;
+      } else if(c.type==='comp'){
+        text = `Relación correcta: <strong>${c.A[0]}/${c.A[1]} ${c.rel} ${c.B[0]}/${c.B[1]}</strong>`;
+      } else if(c.type==='suma'){
+        const [a,b,op,c2,d]=c.expr; const l=mcm(b,d); const na=a*(l/b), nb=c2*(l/d); let num = op==='+'? na+nb : na-nb; const [sn,sd]=simp(num,l);
+        text = `${a}/${b} ${op} ${c2}/${d} = ${na}/${l} ${op} ${nb}/${l} = ${num}/${l} = <strong>${sn}/${sd}</strong>`;
+      }
+      retro.innerHTML = text;
+    }
+
+    // COMPROBAR RESPUESTA
+    function comprobar(){
+      const c = state.current; if(!c) return;
+      state.counts.tries++; intentos.textContent=state.counts.tries;
+      let ok=false, got, sol;
+      if(c.type==='modela'){
+        const v = +document.getElementById('rngM').value; ok = (v===c.n); got=`${v}/${c.d}`; sol=`${c.n}/${c.d}`;
+      } else if(c.type==='equiv'){
+        const n=+document.getElementById('eqNum').value; const d=+document.getElementById('eqDen').value;
+        ok = (n>0&&d>0) && (n/c.base[0] === d/c.base[1]); got = `${n}/${d}`; sol = `${c.target[0]}/${c.target[1]}`;
+      } else if(c.type==='simpl'){
+        const n=+document.getElementById('simNum').value; const d=+document.getElementById('simDen').value;
+        const [sn,sd]=c.ans; ok = (n===sn && d===sd); got = `${n}/${d}`; sol = `${sn}/${sd}`;
+      } else if(c.type==='comp'){
+        const s = document.getElementById('cmpSel').value; ok = s===c.rel; got = s; sol = c.rel;
+      } else if(c.type==='suma'){
+        const n=+document.getElementById('sumNum').value; const d=+document.getElementById('sumDen').value;
+        const [a,b,op,c2,d2]=c.expr; const l=mcm(b,d2); const na=a*(l/b), nb=c2*(l/d2); let num = op==='+'? na+nb : na-nb; const [sn,sd]=simp(num,l);
+        ok = (n===sn && d===sd); got = `${n}/${d}`; sol = `${sn}/${sd}`;
+      }
+
+      const now = new Date().toISOString();
+      state.log.push({t:now,type:c.type, got, sol, ok});
+      if(ok){
+        state.counts.hits++; state.streak++; retro.innerHTML = `<span class="good">✅ ¡Bien! Respuesta correcta.</span>`;
+      } else {
+        state.counts.miss++; state.streak=0; retro.innerHTML = `<span class="badc">❌ Ups. La respuesta correcta era <strong>${sol}</strong>.</span>`;
+      }
+      aciertos.textContent=state.counts.hits; errores.textContent=state.counts.miss; racha.textContent=state.streak;
+      save();
+    }
+
+    // Exportar CSV
+    function exportarCSV(){
+      if(!state.log.length){alert('No hay resultados que exportar.');return}
+      const head = 'fecha,tipo,respondido,solucion,correcto\n';
+      const body = state.log.map(r=>`${r.t},${r.type},${r.got||''},${r.sol||''},${r.ok}`).join('\n');
+      const blob = new Blob([head+body],{type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='resultados_fracciones_grado5.csv'; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+    }
+
+    // Inicializar
+    loadSave();
+    intentos.textContent=state.counts.tries; aciertos.textContent=state.counts.hits; errores.textContent=state.counts.miss; racha.textContent=state.streak;
+    nueva();
+    window.addEventListener('resize', ()=>{
+      // Redibujar barras si existen
+      const c = state.current; if(!c) return;
+      if(c.type==='modela'){ drawBar(document.getElementById('barM'), +document.getElementById('rngM').value, c.d); drawPie(document.getElementById('pieM'), +document.getElementById('rngM').value, c.d) }
+      if(c.type==='comp'){ const [a,b]=c.A, [x,y]=c.B; drawBar(document.getElementById('barA'),a,b); drawBar(document.getElementById('barB'),x,y); }
+    });
+  </script>
+</body>
+</html>
